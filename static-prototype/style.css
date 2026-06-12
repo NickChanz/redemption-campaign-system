@@ -295,8 +295,15 @@ main {
     margin-bottom: 4px;
 }
 
-.lucky-draw-area {
+.lucky-wheel-container {
+    position: relative;
+    width: 250px;
+    height: 250px;
     margin: 30px auto;
+}
+
+.lucky-draw-area {
+    margin: 0 auto;
     width: 250px;
     height: 250px;
     border-radius: 50%;
@@ -338,14 +345,60 @@ main {
 
 .lucky-draw-pointer {
     position: absolute;
-    top: 65px;
+    top: -15px;
     left: calc(50% - 15px);
     width: 0;
     height: 0;
     border-left: 15px solid transparent;
     border-right: 15px solid transparent;
-    border-bottom: 25px solid #f43f5e;
+    border-top: 25px solid #f43f5e;
     z-index: 20;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+
+.wheel-sector-label {
+    position: absolute;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+    pointer-events: none;
+    z-index: 5;
+    text-align: center;
+    line-height: 1.1;
+}
+
+.wheel-sector-label .pts-unit {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    opacity: 0.9;
+    margin-top: -2px;
+    text-transform: uppercase;
+}
+
+.wheel-sector-label.s1 {
+    top: 28%;
+    left: 72%;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.wheel-sector-label.s2 {
+    top: 72%;
+    left: 72%;
+    transform: translate(-50%, -50%) rotate(135deg);
+}
+
+.wheel-sector-label.s3 {
+    top: 72%;
+    left: 28%;
+    transform: translate(-50%, -50%) rotate(225deg);
+}
+
+.wheel-sector-label.s4 {
+    top: 28%;
+    left: 28%;
+    transform: translate(-50%, -50%) rotate(315deg);
 }
 
 /* Coupons Browsing */
