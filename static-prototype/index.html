@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeRedeem - Campaign & Coupon Redemption Platform</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- QRious Library for QR Code Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <div class="logo" id="logo-btn">VibeRedeem</div>
+        <div class="nav-controls">
+            <!-- Language Selector -->
+            <select id="lang-select" class="lang-selector">
+                <option value="en">English</option>
+                <option value="zh-tw">繁體中文</option>
+                <option value="zh-cn">简体中文</option>
+            </select>
+            <!-- CMS toggle -->
+            <button id="cms-toggle-btn" class="btn-secondary">Admin CMS</button>
+            <!-- Logout Button -->
+            <button id="logout-btn" class="btn-secondary" style="display: none;">Logout</button>
+        </div>
+    </header>
+
+    <main>
+        
+        <!-- ================= AUTH VIEW ================= -->
+        <section id="view-auth" class="view-section active">
+            <div class="auth-container glass-panel">
+                <div id="auth-login-form">
+                    <h2 data-i18n="login_title">Welcome Back</h2>
+                    <p data-i18n="login_subtitle">Enter your mobile number and password to login</p>
+                    <form class="auth-form" id="login-form">
+                        <div class="form-group">
+                            <label data-i18n="mobile_label">Mobile Number</label>
+                            <input type="text" id="login-mobile" class="glass-input" placeholder="+852 9123 4567" required>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="password_label">Password</label>
+                            <input type="password" id="login-password" class="glass-input" required>
+                        </div>
+                        <button type="submit" class="btn-primary" data-i18n="login_btn">Sign In</button>
+                    </form>
+                    <div class="auth-footer">
+                        <span data-i18n="no_account">Don't have an account?</span> 
+                        <a href="#" id="go-register-btn" data-i18n="register_link">Register Now</a>
+                    </div>
+                </div>
+
+                <div id="auth-register-form" style="display: none;">
+                    <h2 data-i18n="register_title">Create Account</h2>
+                    <p data-i18n="register_subtitle">Register with your mobile number to earn rewards</p>
+                    <form class="auth-form" id="register-form">
+                        <div class="form-group">
+                            <label data-i18n="mobile_label">Mobile Number</label>
+                            <input type="text" id="register-mobile" class="glass-input" placeholder="+852 9123 4567" required>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="password_label">Password</label>
+                            <input type="password" id="register-password" class="glass-input" placeholder="Min 8 characters" required>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="confirm_password_label">Confirm Password</label>
+                            <input type="password" id="register-confirm-password" class="glass-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="pref_lang_label">Preferred Language</label>
+                            <select id="register-lang" class="glass-input">
+                                <option value="en">English</option>
+                                <option value="zh-tw">繁體中文</option>
+                                <option value="zh-cn">简体中文</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" data-i18n="register_btn">Register</button>
+                    </form>
+                    <div class="auth-footer">
+                        <span data-i18n="already_have_account">Already have an account?</span> 
+                        <a href="#" id="go-login-btn" data-i18n="login_link">Sign In</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= MAIN DASHBOARD VIEW ================= -->
+        <section id="view-dashboard" class="view-section">
+            <div class="dashboard-grid">
+                
+                <!-- Left: Profile & Points -->
+                <div class="profile-card glass-panel">
+                    <h3 data-i18n="my_profile">My Profile</h3>
+                    <div class="form-group">
+                        <p><strong data-i18n="mobile_number">Mobile:</strong> <span id="user-mobile-display">-</span></p>
+                        <p><strong data-i18n="lang_label">Language:</strong> <span id="user-lang-display">-</span></p>
+                    </div>
+                    <div class="points-display">
+                        <p data-i18n="points_balance">Points Balance</p>
+                        <div class="points-val" id="user-points-display">0</div>
+                    </div>
+                    <button id="view-redemptions-btn" class="btn-secondary" data-i18n="view_redemptions_history">Redemption History</button>
+                </div>
+
+                <!-- Right: Daily Lucky Draw -->
+                <div class="draw-card glass-panel">
+                    <h3 data-i18n="daily_lucky_draw">Daily Lucky Draw</h3>
+                    <p data-i18n="lucky_draw_desc">Win random points once every day!</p>
+                    
+                    <div class="lucky-draw-pointer"></div>
+                    <div class="lucky-draw-area" id="lucky-wheel">
+                        <div class="lucky-draw-center" id="draw-spin-btn">SPIN</div>
+                    </div>
+                    <p id="draw-status-msg" style="margin-top: 15px; font-weight: 600;"></p>
+                </div>
+            </div>
+
+            <!-- Coupons Listing Container -->
+            <div style="margin-top: 50px;">
+                <div class="coupon-header-row">
+                    <h2 data-i18n="available_coupons">Browse E-Coupons</h2>
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-filter="all" data-i18n="filter_all">All</button>
+                        <button class="filter-btn" data-filter="redeemable" data-i18n="filter_redeemable">Redeemable</button>
+                        <button class="filter-btn" data-filter="expired" data-i18n="filter_expired">Expired</button>
+                    </div>
+                </div>
+                <div class="coupons-grid" id="coupons-container">
+                    <!-- Dynamic Coupon Cards -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= USER REDEMPTIONS HISTORY VIEW ================= -->
+        <section id="view-redemptions" class="view-section">
+            <div class="glass-panel" style="padding: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 data-i18n="my_redemptions">My Redemption History</h2>
+                    <button id="back-to-dash-btn" class="btn-primary" data-i18n="back_to_dashboard">Dashboard</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-i18n="coupon_name">Coupon Name</th>
+                                <th data-i18n="points_deducted">Points Deducted</th>
+                                <th data-i18n="redemption_code_label">Redemption Code</th>
+                                <th data-i18n="date">Date</th>
+                                <th data-i18n="action">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="redemptions-history-table">
+                            <!-- Dynamic rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= ADMIN CMS VIEW ================= -->
+        <section id="view-cms" class="view-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2>Campaign Admin CMS Console</h2>
+                <button id="cms-exit-btn" class="btn-primary">Exit CMS</button>
+            </div>
+            
+            <div class="cms-layout">
+                <!-- Left: Create/Edit Coupon Form -->
+                <div class="glass-panel" style="padding: 30px; height: fit-content;">
+                    <h3 id="form-action-title">Create New E-Coupon</h3>
+                    <form id="coupon-cms-form" style="display: flex; flex-direction: column; gap: 16px; margin-top: 20px;">
+                        <input type="hidden" id="cms-coupon-id">
+                        
+                        <div class="form-group">
+                            <label>Coupon Unique Code</label>
+                            <input type="text" id="cms-coupon-code" class="glass-input" placeholder="COUPON-VOUCHER-50" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Required Points</label>
+                            <input type="number" id="cms-coupon-points" class="glass-input" value="100" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Total Quota</label>
+                            <input type="number" id="cms-coupon-quota" class="glass-input" value="500" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Remaining Quota</label>
+                            <input type="number" id="cms-coupon-remaining" class="glass-input" value="500" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Image URL</label>
+                            <input type="url" id="cms-coupon-image" class="glass-input" placeholder="https://..." value="">
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="datetime-local" id="cms-coupon-start" class="glass-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="datetime-local" id="cms-coupon-end" class="glass-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select id="cms-coupon-status" class="glass-input">
+                                <option value="draft">Draft</option>
+                                <option value="active" selected>Active</option>
+                                <option value="expired">Expired</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+
+                        <!-- Multi-Language Translations -->
+                        <div style="border-top: 1px solid var(--card-border); padding-top: 15px; margin-top: 10px;">
+                            <h4>Translations</h4>
+                            
+                            <!-- EN -->
+                            <div style="margin-top: 10px; border-left: 3px solid var(--accent-primary); padding-left: 10px;">
+                                <label style="font-weight:600; font-size:0.8rem;">English (EN)</label>
+                                <input type="text" id="cms-title-en" class="glass-input" style="width:100%; margin-top:4px;" placeholder="Title" required>
+                                <textarea id="cms-desc-en" class="glass-input" style="width:100%; margin-top:4px;" placeholder="Description" required></textarea>
+                            </div>
+                            
+                            <!-- ZH-TW -->
+                            <div style="margin-top: 10px; border-left: 3px solid var(--accent-secondary); padding-left: 10px;">
+                                <label style="font-weight:600; font-size:0.8rem;">Traditional Chinese (ZH-TW)</label>
+                                <input type="text" id="cms-title-tw" class="glass-input" style="width:100%; margin-top:4px;" placeholder="標題" required>
+                                <textarea id="cms-desc-tw" class="glass-input" style="width:100%; margin-top:4px;" placeholder="描述" required></textarea>
+                            </div>
+
+                            <!-- ZH-CN -->
+                            <div style="margin-top: 10px; border-left: 3px solid var(--warning); padding-left: 10px;">
+                                <label style="font-weight:600; font-size:0.8rem;">Simplified Chinese (ZH-CN)</label>
+                                <input type="text" id="cms-title-cn" class="glass-input" style="width:100%; margin-top:4px;" placeholder="标题" required>
+                                <textarea id="cms-desc-cn" class="glass-input" style="width:100%; margin-top:4px;" placeholder="描述" required></textarea>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary">Save Coupon</button>
+                        <button type="button" id="cms-form-cancel" class="btn-secondary">Cancel</button>
+                    </form>
+                </div>
+
+                <!-- Right: Coupon List & Redemption Reports -->
+                <div style="display: flex; flex-direction: column; gap: 30px;">
+                    <!-- Coupon Master Table -->
+                    <div class="glass-panel" style="padding: 30px;">
+                        <h3>Active Coupons Catalog</h3>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Title (EN)</th>
+                                        <th>Points</th>
+                                        <th>Quota (Rem/Total)</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cms-coupons-table-body">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Redemptions Report Table -->
+                    <div class="glass-panel" style="padding: 30px;">
+                        <h3>System Redemption Audit Report</h3>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Mobile</th>
+                                        <th>Coupon</th>
+                                        <th>Code</th>
+                                        <th>Points</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cms-reports-table-body">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal for Coupon Details & QR Code display -->
+    <div class="modal-overlay" id="qr-modal">
+        <div class="modal-content glass-panel">
+            <span class="close-btn" id="modal-close-btn">&times;</span>
+            <h3 id="modal-title">Coupon Details</h3>
+            <div id="modal-body-content" style="margin-top: 20px;">
+                <!-- Dynamically Render Details -->
+            </div>
+            <div id="modal-qr-section" style="display: none; margin-top: 20px;">
+                <p style="font-weight: 600;" data-i18n="your_qr_code">Your Unique QR Code:</p>
+                <div class="qr-container">
+                    <canvas id="qr-canvas"></canvas>
+                </div>
+                <p style="font-family: monospace; font-size: 1.1rem; color: var(--accent-secondary);" id="qr-string-val"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Area -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
