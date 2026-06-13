@@ -101,16 +101,19 @@ class RedemptionController extends Controller
         $langCode = $request->query('language', 'en');
         $perPage = $request->query('per_page', 15);
 
+        $language = \App\Models\Language::where('code', $langCode)->first();
+        $langId = $language ? $language->id : 1;
+
         $redemptions = Redemption::where('user_id', $user->id)
-            ->with(['coupon.translations'])
+            ->with(['coupon.translations.language'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        $data = collect($redemptions->items())->map(function ($r) use ($langCode) {
+        $data = collect($redemptions->items())->map(function ($r) use ($langId) {
             $coupon = $r->coupon;
             $title = 'Unknown Coupon';
             if ($coupon) {
-                $translation = $coupon->translations->where('language.code', $langCode)->first()
+                $translation = $coupon->translations->where('language_id', $langId)->first()
                     ?? $coupon->translations->first();
                 $title = $translation ? $translation->title : $coupon->code;
             }
@@ -146,7 +149,13 @@ class RedemptionController extends Controller
         $user = $request->user();
         $langCode = $request->query('language', 'en');
 
-        $redemption = Redemption::where('id', $id)->where('user_id', $user->id)->first();
+        $language = \App\Models\Language::where('code', $langCode)->first();
+        $langId = $language ? $language->id : 1;
+
+        $redemption = Redemption::where('id', $id)
+            ->where('user_id', $user->id)
+            ->with(['coupon.translations.language'])
+            ->first();
 
         if (!$redemption) {
             return response()->json([
@@ -159,7 +168,7 @@ class RedemptionController extends Controller
         $title = 'Unknown Coupon';
         $desc = '';
         if ($coupon) {
-            $translation = $coupon->translations->where('language.code', $langCode)->first()
+            $translation = $coupon->translations->where('language_id', $langId)->first()
                 ?? $coupon->translations->first();
             $title = $translation ? $translation->title : $coupon->code;
             $desc = $translation ? $translation->description : '';

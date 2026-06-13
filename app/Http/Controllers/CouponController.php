@@ -23,7 +23,9 @@ class CouponController extends Controller
         // Apply filters
         $now = Carbon::now();
         if ($filter === 'expired') {
-            $query->where('end_date', '<', $now)->orWhere('status', 'expired');
+            $query->where(function ($q) use ($now) {
+                $q->where('end_date', '<', $now)->orWhere('status', 'expired');
+            });
         } elseif ($filter === 'redeemable') {
             $query->where('status', 'active')
                 ->where('start_date', '<=', $now)

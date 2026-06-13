@@ -33,5 +33,6 @@ Route::prefix('admin')->group(function () {
     Route::post('/coupons', [AdminCouponController::class, 'store']);
     Route::put('/coupons/{id}', [AdminCouponController::class, 'update']);
     Route::get('/coupons', [AdminCouponController::class, 'index']);
+    Route::get('/coupons/{id}', [AdminCouponController::class, 'show']);
     Route::get('/redemptions', [AdminCouponController::class, 'redemptionsReport']);
 });

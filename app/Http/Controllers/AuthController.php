@@ -68,7 +68,6 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'token' => $token,
-            'expires_in' => 3600,
             'user' => [
                 'id' => $user->id,
                 'mobile_number' => $user->mobile_number,

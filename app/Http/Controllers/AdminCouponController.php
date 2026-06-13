@@ -204,17 +204,54 @@ class AdminCouponController extends Controller
         ]);
     }
 
+    public function show($id)
+    {
+        $coupon = Coupon::with(['translations.language'])->find($id);
+
+        if (!$coupon) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Coupon not found'
+            ], 404);
+        }
+
+        $translations = [];
+        foreach ($coupon->translations as $t) {
+            $translations[$t->language->code] = [
+                'title' => $t->title,
+                'description' => $t->description,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $coupon->id,
+                'code' => $coupon->code,
+                'image_url' => $coupon->image_url,
+                'required_points' => $coupon->required_points,
+                'total_quota' => $coupon->total_quota,
+                'remaining_quota' => $coupon->remaining_quota,
+                'start_date' => $coupon->start_date,
+                'end_date' => $coupon->end_date,
+                'status' => $coupon->status,
+                'translations' => $translations,
+            ]
+        ]);
+    }
+
     public function redemptionsReport(Request $request)
     {
         $query = Redemption::with(['user', 'coupon.translations']);
 
         if ($request->query('coupon_id')) {
-            $query->where('coupon_id', $request->coupon_id);
+            $query->where('coupon_id', $request->query('coupon_id'));
         }
 
         if ($request->query('mobile_number')) {
-            $query->whereHas('user', function ($u) use ($request) {
-                $u->where('mobile_number', 'like', "%{$request->mobile_number}%");
+            $mobileNumber = $request->query('mobile_number');
+            $query->whereHas('user', function ($u) use ($mobileNumber) {
+                $u->where('mobile_number', 'like', "%{$mobileNumber}%");
             });
         }
 

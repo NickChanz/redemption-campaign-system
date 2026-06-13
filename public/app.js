@@ -645,7 +645,7 @@ async function renderCMSCoupons() {
             btn.addEventListener('click', async (e) => {
                 const id = parseInt(e.target.getAttribute('data-id'));
                 try {
-                    const res = await apiFetch(`/coupons/${id}`);
+                    const res = await apiFetch(`/admin/coupons/${id}`);
                     editCMSCoupon(res.data);
                 } catch (err) {
                     showToast("Failed to fetch coupon details.", "danger");
@@ -665,20 +665,22 @@ function editCMSCoupon(coupon) {
     document.getElementById('cms-coupon-points').value = coupon.required_points;
     document.getElementById('cms-coupon-quota').value = coupon.total_quota;
     document.getElementById('cms-coupon-remaining').value = coupon.remaining_quota;
-    document.getElementById('cms-coupon-image').value = coupon.image_url;
-    document.getElementById('cms-coupon-start').value = coupon.start_date.slice(0, 16);
-    document.getElementById('cms-coupon-end').value = coupon.expiry_date.slice(0, 16);
+    document.getElementById('cms-coupon-image').value = coupon.image_url || '';
+    document.getElementById('cms-coupon-start').value = coupon.start_date ? coupon.start_date.slice(0, 16) : '';
+    document.getElementById('cms-coupon-end').value = coupon.end_date ? coupon.end_date.slice(0, 16) : '';
     document.getElementById('cms-coupon-status').value = coupon.status;
 
-    // Fill translations (request API details and autofill)
-    document.getElementById('cms-title-en').value = coupon.title;
-    document.getElementById('cms-desc-en').value = coupon.description;
+    // Fill translations from keyed translations object
+    const translations = coupon.translations || {};
     
-    document.getElementById('cms-title-tw').value = coupon.title; // Default fallback
-    document.getElementById('cms-desc-tw').value = coupon.description;
+    document.getElementById('cms-title-en').value = translations.en ? translations.en.title : '';
+    document.getElementById('cms-desc-en').value = translations.en ? translations.en.description : '';
     
-    document.getElementById('cms-title-cn').value = coupon.title;
-    document.getElementById('cms-desc-cn').value = coupon.description;
+    document.getElementById('cms-title-tw').value = translations['zh-tw'] ? translations['zh-tw'].title : '';
+    document.getElementById('cms-desc-tw').value = translations['zh-tw'] ? translations['zh-tw'].description : '';
+    
+    document.getElementById('cms-title-cn').value = translations['zh-cn'] ? translations['zh-cn'].title : '';
+    document.getElementById('cms-desc-cn').value = translations['zh-cn'] ? translations['zh-cn'].description : '';
 }
 
 // Cancel CMS editing
