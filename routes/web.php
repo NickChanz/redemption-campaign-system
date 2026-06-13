@@ -26,3 +26,13 @@ Route::get('/api-docs', function () {
   </body>
 </html>';
 });
+
+Route::get('/openapi.yaml', function () {
+    $path = public_path('openapi.yaml');
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    return response()->file($path, [
+        'Content-Type' => 'text/yaml'
+    ]);
+});
