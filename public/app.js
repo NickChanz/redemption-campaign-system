@@ -143,116 +143,79 @@ const i18n = {
     }
 };
 
-// Initial Mock Coupon Data
-const defaultCoupons = [
-    {
-        id: 1,
-        code: "COUPON-STARBUCKS-50",
-        required_points: 500,
-        total_quota: 100,
-        remaining_quota: 85,
-        image_url: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=500&auto=format&fit=crop&q=60",
-        start_date: "2026-06-01T00:00",
-        end_date: "2026-12-31T23:59",
-        status: "active",
-        translations: {
-            en: { title: "Starbucks HK$50 Cash Voucher", description: "Save HK$50 on any beverages at regional Starbucks stores." },
-            "zh-tw": { title: "星巴克 HK$50 現金券", description: "於指定星巴克門市購買任何飲品即可扣減 HK$50。" },
-            "zh-cn": { title: "星巴克 HK$50 现金券", description: "于指定星巴克门市购买任何饮品即可扣减 HK$50。" }
-        }
-    },
-    {
-        id: 2,
-        code: "COUPON-AMAZON-20",
-        required_points: 800,
-        total_quota: 50,
-        remaining_quota: 42,
-        image_url: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?w=500&auto=format&fit=crop&q=60",
-        start_date: "2026-06-01T00:00",
-        end_date: "2026-12-31T23:59",
-        status: "active",
-        translations: {
-            en: { title: "Amazon $20 Gift Card", description: "Redeem towards millions of items store-wide at Amazon.com." },
-            "zh-tw": { title: "亞馬遜 $20 美金禮品卡", description: "可用於亞馬遜網站上數百萬款商品的消費抵扣。" },
-            "zh-cn": { title: "亚马逊 $20 美金礼品卡", description: "可用于亚马逊网站上数百万款商品的消费抵扣。" }
-        }
-    },
-    {
-        id: 3,
-        code: "COUPON-NETFLIX-1M",
-        required_points: 1200,
-        total_quota: 30,
-        remaining_quota: 0, // Out of quota for demo
-        image_url: "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?w=500&auto=format&fit=crop&q=60",
-        start_date: "2026-06-01T00:00",
-        end_date: "2026-12-31T23:59",
-        status: "active",
-        translations: {
-            en: { title: "Netflix 1-Month Premium", description: "Unlimited movies, TV shows, and mobile games in Ultra HD." },
-            "zh-tw": { title: "Netflix 1個月高級會員", description: "無限量觀看電影、電視節目，支援4K Ultra HD畫質。" },
-            "zh-cn": { title: "Netflix 1个月高级会员", description: "无限量观看电影、电视节目，支持4K Ultra HD画质。" }
-        }
-    },
-    {
-        id: 4,
-        code: "COUPON-UBER-10",
-        required_points: 200,
-        total_quota: 200,
-        remaining_quota: 198,
-        image_url: "https://images.unsplash.com/photo-1549576490-b0b4831ef60a?w=500&auto=format&fit=crop&q=60",
-        start_date: "2026-01-01T00:00",
-        end_date: "2026-05-30T23:59", // Expired for demo
-        status: "expired",
-        translations: {
-            en: { title: "Uber $10 Ride Discount", description: "Enjoy $10 off your next rides. Valid on UberX or Premium." },
-            "zh-tw": { title: "Uber $10 乘車優惠券", description: "下一程 Uber 乘車抵減 $10，適用於優步所有車型。" },
-            "zh-cn": { title: "Uber $10 乘车优惠券", description: "下一程 Uber 乘车抵减 $10，适用于优步所有车型。" }
-        }
-    }
-];
-
 // App State Management
 let state = {
     currentUser: null,
     currentLanguage: 'en',
     currentFilter: 'all',
-    users: [],
     coupons: [],
     redemptions: [],
-    luckyDraws: [],
-    transactions: [],
     spinning: false
 };
 
-// Initialize Storage
-function initStorage() {
-    if (!localStorage.getItem('v_users')) {
-        localStorage.setItem('v_users', JSON.stringify([
-            { id: 1, mobile: "+85291234567", password: "Password123", lang: "en", points: 1500, status: "active" }
-        ]));
+// API Fetch Helper
+const API_PREFIX = '/api';
+
+async function apiFetch(url, options = {}) {
+    const token = localStorage.getItem('auth_token');
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...options.headers,
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
     }
-    if (!localStorage.getItem('v_coupons')) {
-        localStorage.setItem('v_coupons', JSON.stringify(defaultCoupons));
-    }
-    if (!localStorage.getItem('v_redemptions')) {
-        localStorage.setItem('v_redemptions', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('v_lucky_draws')) {
-        localStorage.setItem('v_lucky_draws', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('v_transactions')) {
-        localStorage.setItem('v_transactions', JSON.stringify([]));
+    const response = await fetch(`${API_PREFIX}${url}`, {
+        ...options,
+        headers,
+    });
+    
+    if (response.status === 401) {
+        localStorage.removeItem('auth_token');
+        state.currentUser = null;
+        document.getElementById('logout-btn').style.display = 'none';
+        showView('view-auth');
+        showToast("Session expired. Please sign in again.", "danger");
+        throw new Error("Unauthorized");
     }
 
-    state.users = JSON.parse(localStorage.getItem('v_users'));
-    state.coupons = JSON.parse(localStorage.getItem('v_coupons'));
-    state.redemptions = JSON.parse(localStorage.getItem('v_redemptions'));
-    state.luckyDraws = JSON.parse(localStorage.getItem('v_lucky_draws'));
-    state.transactions = JSON.parse(localStorage.getItem('v_transactions'));
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'API request failed');
+    }
+    return data;
 }
 
-function updateStorage(key, val) {
-    localStorage.setItem(key, JSON.stringify(val));
+// Bootstrap Application on Launch
+async function bootstrapApp() {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+        try {
+            await fetchProfile();
+            document.getElementById('logout-btn').style.display = 'inline-block';
+            showView('view-dashboard');
+        } catch (err) {
+            localStorage.removeItem('auth_token');
+            showView('view-auth');
+        }
+    } else {
+        showView('view-auth');
+    }
+}
+
+// Fetch Profile Details
+async function fetchProfile() {
+    try {
+        const res = await apiFetch('/profile');
+        state.currentUser = res.data;
+        state.currentLanguage = res.data.preferred_language || 'en';
+        setLanguage(state.currentLanguage);
+        updateProfileUI();
+    } catch (err) {
+        showToast("Failed to fetch profile info.", "danger");
+        throw err;
+    }
 }
 
 // Translate Functionality
@@ -271,8 +234,7 @@ function setLanguage(lang) {
         }
     });
 
-    // Refresh rendering to update localized content in dynamic elements
-    renderCoupons();
+    fetchCoupons();
     if (state.currentUser) {
         renderRedemptions();
     }
@@ -312,12 +274,12 @@ document.getElementById('go-login-btn').addEventListener('click', (e) => {
 });
 
 // Authentication Handlers
-document.getElementById('register-form').addEventListener('submit', (e) => {
+document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const mobile = document.getElementById('register-mobile').value.trim();
+    const mobile_number = document.getElementById('register-mobile').value.trim();
     const password = document.getElementById('register-password').value;
     const confirmPass = document.getElementById('register-confirm-password').value;
-    const prefLang = document.getElementById('register-lang').value;
+    const preferred_language = document.getElementById('register-lang').value;
 
     if (password.length < 8) {
         showToast("Password must be at least 8 characters.", "danger");
@@ -328,58 +290,52 @@ document.getElementById('register-form').addEventListener('submit', (e) => {
         return;
     }
 
-    const exist = state.users.find(u => u.mobile === mobile);
-    if (exist) {
-        showToast("Mobile number is already registered.", "danger");
-        return;
+    try {
+        await apiFetch('/register', {
+            method: 'POST',
+            body: JSON.stringify({
+                mobile_number,
+                password,
+                password_confirmation: confirmPass,
+                preferred_language
+            })
+        });
+        showToast("Registration successful! Please login.", "success");
+        document.getElementById('register-form').reset();
+        document.getElementById('auth-register-form').style.display = 'none';
+        document.getElementById('auth-login-form').style.display = 'block';
+    } catch (err) {
+        showToast(err.message, "danger");
     }
-
-    const newUser = {
-        id: state.users.length + 1,
-        mobile,
-        password, // stored plain for mock demo purposes
-        lang: prefLang,
-        points: 0,
-        status: "active"
-    };
-
-    state.users.push(newUser);
-    updateStorage('v_users', state.users);
-
-    showToast("Registration successful! Please login.", "success");
-    document.getElementById('register-form').reset();
-    document.getElementById('auth-register-form').style.display = 'none';
-    document.getElementById('auth-login-form').style.display = 'block';
 });
 
-document.getElementById('login-form').addEventListener('submit', (e) => {
+document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const mobile = document.getElementById('login-mobile').value.trim();
+    const mobile_number = document.getElementById('login-mobile').value.trim();
     const password = document.getElementById('login-password').value;
 
-    const user = state.users.find(u => u.mobile === mobile && u.password === password);
-    if (!user) {
-        showToast("Invalid mobile number or password.", "danger");
-        return;
+    try {
+        const res = await apiFetch('/login', {
+            method: 'POST',
+            body: JSON.stringify({ mobile_number, password })
+        });
+        
+        localStorage.setItem('auth_token', res.token);
+        state.currentUser = res.user;
+        state.currentLanguage = res.user.preferred_language || 'en';
+        setLanguage(state.currentLanguage);
+        
+        showToast("Signed in successfully!", "success");
+        document.getElementById('logout-btn').style.display = 'inline-block';
+        updateProfileUI();
+        showView('view-dashboard');
+    } catch (err) {
+        showToast(err.message, "danger");
     }
-
-    if (user.status !== 'active') {
-        showToast("User account is suspended or inactive.", "danger");
-        return;
-    }
-
-    state.currentUser = user;
-    showToast("Signed in successfully!", "success");
-    
-    // Set UI to reflect language preferences
-    setLanguage(user.lang);
-    updateProfileUI();
-
-    document.getElementById('logout-btn').style.display = 'inline-block';
-    showView('view-dashboard');
 });
 
 document.getElementById('logout-btn').addEventListener('click', () => {
+    localStorage.removeItem('auth_token');
     state.currentUser = null;
     document.getElementById('logout-btn').style.display = 'none';
     document.getElementById('login-form').reset();
@@ -388,144 +344,116 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 
 function updateProfileUI() {
     if (!state.currentUser) return;
-    document.getElementById('user-mobile-display').textContent = state.currentUser.mobile;
-    document.getElementById('user-lang-display').textContent = state.currentUser.lang.toUpperCase();
-    document.getElementById('user-points-display').textContent = state.currentUser.points;
-    renderCoupons();
+    document.getElementById('user-mobile-display').textContent = state.currentUser.mobile_number;
+    document.getElementById('user-lang-display').textContent = state.currentUser.preferred_language.toUpperCase();
+    document.getElementById('user-points-display').textContent = state.currentUser.total_points;
+    fetchCoupons();
 }
 
 // Daily Lucky Draw Spin Logic
-document.getElementById('draw-spin-btn').addEventListener('click', () => {
+document.getElementById('draw-spin-btn').addEventListener('click', async () => {
     if (state.spinning) return;
     if (!state.currentUser) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const alreadyDrawn = state.luckyDraws.find(d => d.user_id === state.currentUser.id && d.draw_date === todayStr);
-
-    if (alreadyDrawn) {
-        const msg = i18n[state.currentLanguage].alert_already_drawn;
-        document.getElementById('draw-status-msg').textContent = msg;
-        document.getElementById('draw-status-msg').style.color = 'var(--danger)';
-        showToast(msg, "warning");
-        return;
-    }
-
     state.spinning = true;
     document.getElementById('draw-status-msg').textContent = "";
-    
-    // Choose random point sector
-    const sectors = [
-        { points: 10, degree: 45 },   // conic section 0 - 90 deg (Gold/Blue border)
-        { points: 20, degree: 135 },  // 90 - 180 deg
-        { points: 50, degree: 225 },  // 180 - 270 deg
-        { points: 100, degree: 315 }  // 270 - 360 deg
-    ];
 
-    const resultSector = sectors[Math.floor(Math.random() * sectors.length)];
-    
-    // Add multiple rotations + target angle
-    const totalRotation = 360 * 5 - resultSector.degree; // Spin counter-clockwise to match pointer
-    const wheel = document.getElementById('lucky-wheel');
-    
-    wheel.style.transform = `rotate(${totalRotation}deg)`;
+    try {
+        const res = await apiFetch('/lucky-draw', { method: 'POST' });
+        const awardedPoints = res.data.awarded_points;
 
-    setTimeout(() => {
-        // Award points
-        state.currentUser.points += resultSector.points;
-        
-        // Save history & transactions ledger
-        state.luckyDraws.push({
-            id: state.luckyDraws.length + 1,
-            user_id: state.currentUser.id,
-            draw_date: todayStr,
-            points_awarded: resultSector.points,
-            created_at: new Date().toISOString()
-        });
+        // Choose corresponding wheel sector degree
+        const sectors = {
+            10: 45,
+            20: 135,
+            50: 225,
+            100: 315
+        };
+        const targetDegree = sectors[awardedPoints] || 45;
+        const totalRotation = 360 * 5 - targetDegree;
 
-        state.transactions.push({
-            id: state.transactions.length + 1,
-            user_id: state.currentUser.id,
-            transaction_type: 'lucky_draw',
-            points: resultSector.points,
-            reference_id: state.luckyDraws.length,
-            description: `Daily Lucky Draw Award`,
-            created_at: new Date().toISOString()
-        });
+        const wheel = document.getElementById('lucky-wheel');
+        wheel.style.transform = `rotate(${totalRotation}deg)`;
 
-        // Sync updates to users list & local storage
-        const userIdx = state.users.findIndex(u => u.id === state.currentUser.id);
-        state.users[userIdx] = state.currentUser;
-
-        updateStorage('v_users', state.users);
-        updateStorage('v_lucky_draws', state.luckyDraws);
-        updateStorage('v_transactions', state.transactions);
-
-        // Reset wheel animation instantly to base angle
-        wheel.style.transition = 'none';
-        wheel.style.transform = `rotate(${360 - resultSector.degree}deg)`;
         setTimeout(() => {
-            wheel.style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.3, 1)';
-        }, 50);
+            // Update state points balance
+            state.currentUser.total_points = res.data.current_balance;
 
-        // Update UI
-        updateProfileUI();
+            // Reset wheel position animation
+            wheel.style.transition = 'none';
+            wheel.style.transform = `rotate(${360 - targetDegree}deg)`;
+            setTimeout(() => {
+                wheel.style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.3, 1)';
+            }, 50);
+
+            // Update UI
+            updateProfileUI();
+            state.spinning = false;
+
+            const successMsg = i18n[state.currentLanguage].alert_draw_success.replace("{points}", awardedPoints);
+            document.getElementById('draw-status-msg').textContent = successMsg;
+            document.getElementById('draw-status-msg').style.color = 'var(--success)';
+            showToast(successMsg, "success");
+
+        }, 4000);
+
+    } catch (err) {
         state.spinning = false;
-
-        const successMsg = i18n[state.currentLanguage].alert_draw_success.replace("{points}", resultSector.points);
-        document.getElementById('draw-status-msg').textContent = successMsg;
-        document.getElementById('draw-status-msg').style.color = 'var(--success)';
-        showToast(successMsg, "success");
-
-    }, 4000);
+        const errMsg = err.message === "Already participated in today's draw." 
+            ? i18n[state.currentLanguage].alert_already_drawn 
+            : err.message;
+        document.getElementById('draw-status-msg').textContent = errMsg;
+        document.getElementById('draw-status-msg').style.color = 'var(--danger)';
+        showToast(errMsg, "warning");
+    }
 });
 
+// Fetch E-Coupon List
+async function fetchCoupons() {
+    if (!state.currentUser) return;
+    try {
+        const res = await apiFetch(`/coupons?language=${state.currentLanguage}&filter=${state.currentFilter}`);
+        state.coupons = res.data;
+        renderCouponsList();
+    } catch (err) {
+        showToast("Failed to fetch coupons.", "danger");
+    }
+}
+
 // Render E-Coupon List
-function renderCoupons() {
+function renderCouponsList() {
     const container = document.getElementById('coupons-container');
     container.innerHTML = "";
 
-    const userPoints = state.currentUser ? state.currentUser.points : 0;
-    const now = new Date();
+    const userPoints = state.currentUser ? state.currentUser.total_points : 0;
+    const langCode = state.currentLanguage;
 
     state.coupons.forEach(coupon => {
-        // Localized strings
-        const langCode = state.currentLanguage;
-        const trans = coupon.translations[langCode] || coupon.translations['en'];
-
-        // Determine if Coupon matches the selected filter status
-        const isExpired = new Date(coupon.end_date) < now || coupon.status === 'expired';
-        if (state.currentFilter === 'expired' && !isExpired) return;
-        if (state.currentFilter === 'redeemable' && (isExpired || userPoints < coupon.required_points || coupon.remaining_quota <= 0 || coupon.status !== 'active')) return;
-
-        // Button markup setup
         let btnText = i18n[langCode].btn_redeem;
         let btnDisabled = false;
 
-        if (isExpired) {
-            btnText = i18n[langCode].btn_expired;
+        if (!coupon.is_redeemable) {
             btnDisabled = true;
-        } else if (coupon.status === 'disabled') {
-            btnText = i18n[langCode].status_disabled;
-            btnDisabled = true;
-        } else if (coupon.remaining_quota <= 0) {
-            btnText = i18n[langCode].btn_no_quota;
-            btnDisabled = true;
-        } else if (userPoints < coupon.required_points) {
-            btnText = i18n[langCode].btn_points_short;
-            btnDisabled = true;
+            if (coupon.remaining_quota <= 0) {
+                btnText = i18n[langCode].btn_no_quota;
+            } else if (userPoints < coupon.required_points) {
+                btnText = i18n[langCode].btn_points_short;
+            } else {
+                btnText = i18n[langCode].btn_expired;
+            }
         }
 
         const card = document.createElement('div');
         card.className = "coupon-card glass-panel";
         card.innerHTML = `
             <div class="coupon-img-wrapper">
-                <img src="${coupon.image_url || 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=500'}" class="coupon-img" alt="${trans.title}">
-                <div class="coupon-tag">${coupon.remaining_quota} / ${coupon.total_quota} Left</div>
+                <img src="${coupon.image_url || 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=500'}" class="coupon-img" alt="${coupon.title}">
+                <div class="coupon-tag">${coupon.remaining_quota} Left</div>
             </div>
             <div class="coupon-info">
-                <div class="coupon-title">${trans.title}</div>
-                <div class="coupon-desc">${trans.description}</div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary);">Expires: ${new Date(coupon.end_date).toLocaleDateString()}</div>
+                <div class="coupon-title">${coupon.title}</div>
+                <div class="coupon-desc">${coupon.description}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Expires: ${new Date(coupon.expiry_date).toLocaleDateString()}</div>
                 <div class="coupon-footer">
                     <div class="points-cost">${coupon.required_points} pts</div>
                     <button class="btn-primary redeem-action-btn" data-id="${coupon.id}" ${btnDisabled ? 'disabled style="opacity: 0.6; cursor: not-allowed; box-shadow: none;"' : ''}>
@@ -552,121 +480,70 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
         state.currentFilter = e.target.getAttribute('data-filter');
-        renderCoupons();
+        fetchCoupons();
     });
 });
 
 // Redeem Coupon Process
-function redeemCoupon(couponId) {
-    if (!state.currentUser) return;
-    const couponIdx = state.coupons.findIndex(c => c.id === couponId);
-    if (couponIdx === -1) return;
-
-    const coupon = state.coupons[couponIdx];
-    const now = new Date();
-
-    // Validations
-    if (coupon.status !== 'active' || now < new Date(coupon.start_date) || now > new Date(coupon.end_date)) {
-        showToast("Coupon is not active or has expired.", "danger");
-        return;
+async function redeemCoupon(couponId) {
+    try {
+        const res = await apiFetch(`/coupons/${couponId}/redeem`, { method: 'POST' });
+        state.currentUser.total_points = res.data.remaining_points;
+        updateProfileUI();
+        
+        showToast(i18n[state.currentLanguage].alert_redeem_success, "success");
+        
+        // Open QR modal directly with returned redemption info
+        const coupon = state.coupons.find(c => c.id === couponId);
+        openQRModal({
+            qr_code_value: res.data.qr_code_value,
+            redemption_code: res.data.redemption_code
+        }, coupon);
+    } catch (err) {
+        showToast(err.message, "danger");
     }
-    if (coupon.remaining_quota <= 0) {
-        showToast("Out of quota.", "danger");
-        return;
-    }
-    if (state.currentUser.points < coupon.required_points) {
-        showToast("Insufficient points.", "danger");
-        return;
-    }
-
-    // Process Points deduction and quota reduction
-    state.currentUser.points -= coupon.required_points;
-    coupon.remaining_quota -= 1;
-
-    // Generate unique codes
-    const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
-    const randomHex = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 8).toUpperCase();
-    const qrCodeVal = `RED-${dateStr}-${randomHex}`;
-
-    const newRedemption = {
-        id: state.redemptions.length + 1,
-        user_id: state.currentUser.id,
-        coupon_id: coupon.id,
-        redemption_code: qrCodeVal,
-        qr_code_value: qrCodeVal,
-        points_deducted: coupon.required_points,
-        status: "completed",
-        created_at: now.toISOString()
-    };
-
-    state.redemptions.push(newRedemption);
-    
-    // Add ledger points transaction
-    state.transactions.push({
-        id: state.transactions.length + 1,
-        user_id: state.currentUser.id,
-        transaction_type: 'redemption',
-        points: -coupon.required_points,
-        reference_id: newRedemption.id,
-        description: `Redeemed Coupon: ${coupon.code}`,
-        created_at: now.toISOString()
-    });
-
-    // Update Storage
-    const userIdx = state.users.findIndex(u => u.id === state.currentUser.id);
-    state.users[userIdx] = state.currentUser;
-    updateStorage('v_users', state.users);
-    updateStorage('v_coupons', state.coupons);
-    updateStorage('v_redemptions', state.redemptions);
-    updateStorage('v_transactions', state.transactions);
-
-    updateProfileUI();
-    showToast(i18n[state.currentLanguage].alert_redeem_success, "success");
-
-    // Open QR code modal directly
-    openQRModal(newRedemption, coupon);
 }
 
-// Render Redemption History
-function renderRedemptions() {
+// Fetch and Render Redemption History
+async function renderRedemptions() {
     const tableBody = document.getElementById('redemptions-history-table');
     tableBody.innerHTML = "";
 
-    const userRedemptions = state.redemptions.filter(r => r.user_id === state.currentUser.id);
+    try {
+        const res = await apiFetch(`/redemptions?language=${state.currentLanguage}`);
+        state.redemptions = res.data;
 
-    if (userRedemptions.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No redemptions found.</td></tr>`;
-        return;
-    }
+        if (state.redemptions.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No redemptions found.</td></tr>`;
+            return;
+        }
 
-    userRedemptions.forEach(r => {
-        const coupon = state.coupons.find(c => c.id === r.coupon_id);
-        const langCode = state.currentLanguage;
-        const couponTitle = coupon ? (coupon.translations[langCode]?.title || coupon.translations['en']?.title) : 'Unknown Coupon';
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><strong>${couponTitle}</strong></td>
-            <td style="color: var(--danger); font-weight:600;">-${r.points_deducted} pts</td>
-            <td><code>${r.redemption_code}</code></td>
-            <td>${new Date(r.created_at).toLocaleString()}</td>
-            <td>
-                <button class="btn-primary view-qr-btn" data-redemption-id="${r.id}" style="padding: 6px 12px; font-size: 0.85rem; box-shadow: none;">
-                    ${i18n[langCode].btn_view_qr}
-                </button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-
-    document.querySelectorAll('.view-qr-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const rId = parseInt(e.target.getAttribute('data-redemption-id'));
-            const redemption = state.redemptions.find(r => r.id === rId);
-            const coupon = state.coupons.find(c => c.id === redemption.coupon_id);
-            openQRModal(redemption, coupon);
+        state.redemptions.forEach(r => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${r.coupon.title}</strong></td>
+                <td style="color: var(--danger); font-weight:600;">-${r.points_deducted} pts</td>
+                <td><code>${r.redemption_code}</code></td>
+                <td>${new Date(r.created_at).toLocaleString()}</td>
+                <td>
+                    <button class="btn-primary view-qr-btn" data-redemption-id="${r.id}" style="padding: 6px 12px; font-size: 0.85rem; box-shadow: none;">
+                        ${i18n[state.currentLanguage].btn_view_qr}
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
         });
-    });
+
+        document.querySelectorAll('.view-qr-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const rId = parseInt(e.target.getAttribute('data-redemption-id'));
+                const redemption = state.redemptions.find(r => r.id === rId);
+                openQRModal(redemption, redemption.coupon);
+            });
+        });
+    } catch (err) {
+        showToast("Failed to fetch redemption history.", "danger");
+    }
 }
 
 // View Switching handlers
@@ -691,21 +568,15 @@ document.getElementById('logo-btn').addEventListener('click', () => {
 
 // QR Modal Render Functions
 function openQRModal(redemption, coupon) {
-    const langCode = state.currentLanguage;
-    const trans = coupon.translations[langCode] || coupon.translations['en'];
-
-    document.getElementById('modal-title').textContent = trans.title;
+    document.getElementById('modal-title').textContent = coupon.title;
     document.getElementById('modal-body-content').innerHTML = `
-        <p style="color: var(--text-secondary); margin-bottom: 15px;">${trans.description}</p>
-        <p><strong>Code:</strong> <code>${coupon.code}</code></p>
-        <p><strong>Expiry:</strong> ${new Date(coupon.end_date).toLocaleDateString()}</p>
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">${coupon.description || ''}</p>
+        <p><strong>Code:</strong> <code>${coupon.code || ''}</code></p>
     `;
 
-    // Show QR code
     document.getElementById('modal-qr-section').style.display = 'block';
     document.getElementById('qr-string-val').textContent = redemption.qr_code_value;
 
-    // Render Canvas QR
     new QRious({
         element: document.getElementById('qr-canvas'),
         value: redemption.qr_code_value,
@@ -747,32 +618,43 @@ document.getElementById('cms-exit-btn').addEventListener('click', () => {
 });
 
 // Render CMS Coupon List
-function renderCMSCoupons() {
+async function renderCMSCoupons() {
     const tbody = document.getElementById('cms-coupons-table-body');
     tbody.innerHTML = "";
 
-    state.coupons.forEach(c => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><code>${c.code}</code></td>
-            <td>${c.translations.en.title}</td>
-            <td><strong>${c.required_points}</strong></td>
-            <td>${c.remaining_quota} / ${c.total_quota}</td>
-            <td><span class="status-badge status-${c.status}">${c.status.toUpperCase()}</span></td>
-            <td>
-                <button class="btn-primary cms-edit-btn" data-id="${c.id}" style="padding: 6px 12px; font-size: 0.85rem; box-shadow: none;">Edit</button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
+    try {
+        const res = await apiFetch('/admin/coupons');
+        const coupons = res.data;
 
-    document.querySelectorAll('.cms-edit-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = parseInt(e.target.getAttribute('data-id'));
-            const coupon = state.coupons.find(c => c.id === id);
-            editCMSCoupon(coupon);
+        coupons.forEach(c => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><code>${c.code}</code></td>
+                <td>${c.translations.en || ''}</td>
+                <td><strong>${c.required_points}</strong></td>
+                <td>${c.remaining_quota} / ${c.total_quota}</td>
+                <td><span class="status-badge status-${c.status}">${c.status.toUpperCase()}</span></td>
+                <td>
+                    <button class="btn-primary cms-edit-btn" data-id="${c.id}" style="padding: 6px 12px; font-size: 0.85rem; box-shadow: none;">Edit</button>
+                </td>
+            `;
+            tbody.appendChild(row);
         });
-    });
+
+        document.querySelectorAll('.cms-edit-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = parseInt(e.target.getAttribute('data-id'));
+                try {
+                    const res = await apiFetch(`/coupons/${id}`);
+                    editCMSCoupon(res.data);
+                } catch (err) {
+                    showToast("Failed to fetch coupon details.", "danger");
+                }
+            });
+        });
+    } catch (err) {
+        showToast("Failed to load admin coupons.", "danger");
+    }
 }
 
 // Edit Coupon in CMS form
@@ -784,19 +666,19 @@ function editCMSCoupon(coupon) {
     document.getElementById('cms-coupon-quota').value = coupon.total_quota;
     document.getElementById('cms-coupon-remaining').value = coupon.remaining_quota;
     document.getElementById('cms-coupon-image').value = coupon.image_url;
-    document.getElementById('cms-coupon-start').value = coupon.start_date;
-    document.getElementById('cms-coupon-end').value = coupon.end_date;
+    document.getElementById('cms-coupon-start').value = coupon.start_date.slice(0, 16);
+    document.getElementById('cms-coupon-end').value = coupon.expiry_date.slice(0, 16);
     document.getElementById('cms-coupon-status').value = coupon.status;
 
-    // Fill translations
-    document.getElementById('cms-title-en').value = coupon.translations.en.title;
-    document.getElementById('cms-desc-en').value = coupon.translations.en.description;
+    // Fill translations (request API details and autofill)
+    document.getElementById('cms-title-en').value = coupon.title;
+    document.getElementById('cms-desc-en').value = coupon.description;
     
-    document.getElementById('cms-title-tw').value = coupon.translations['zh-tw']?.title || "";
-    document.getElementById('cms-desc-tw').value = coupon.translations['zh-tw']?.description || "";
+    document.getElementById('cms-title-tw').value = coupon.title; // Default fallback
+    document.getElementById('cms-desc-tw').value = coupon.description;
     
-    document.getElementById('cms-title-cn').value = coupon.translations['zh-cn']?.title || "";
-    document.getElementById('cms-desc-cn').value = coupon.translations['zh-cn']?.description || "";
+    document.getElementById('cms-title-cn').value = coupon.title;
+    document.getElementById('cms-desc-cn').value = coupon.description;
 }
 
 // Cancel CMS editing
@@ -811,82 +693,102 @@ function resetCMSForm() {
 }
 
 // Save CMS Coupon (Create or Update)
-document.getElementById('coupon-cms-form').addEventListener('submit', (e) => {
+document.getElementById('coupon-cms-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const idVal = document.getElementById('cms-coupon-id').value;
     const code = document.getElementById('cms-coupon-code').value.trim();
     const required_points = parseInt(document.getElementById('cms-coupon-points').value);
     const total_quota = parseInt(document.getElementById('cms-coupon-quota').value);
-    const remaining_quota = parseInt(document.getElementById('cms-coupon-remaining').value);
     const image_url = document.getElementById('cms-coupon-image').value.trim();
     const start_date = document.getElementById('cms-coupon-start').value;
     const end_date = document.getElementById('cms-coupon-end').value;
     const status = document.getElementById('cms-coupon-status').value;
 
-    const translations = {
-        en: {
+    const translations = [
+        {
+            language_code: 'en',
             title: document.getElementById('cms-title-en').value.trim(),
             description: document.getElementById('cms-desc-en').value.trim()
         },
-        "zh-tw": {
+        {
+            language_code: 'zh-tw',
             title: document.getElementById('cms-title-tw').value.trim(),
             description: document.getElementById('cms-desc-tw').value.trim()
         },
-        "zh-cn": {
+        {
+            language_code: 'zh-cn',
             title: document.getElementById('cms-title-cn').value.trim(),
             description: document.getElementById('cms-desc-cn').value.trim()
         }
-    };
+    ];
 
-    if (idVal) {
-        // Edit Existing
-        const idx = state.coupons.findIndex(c => c.id === parseInt(idVal));
-        if (idx !== -1) {
-            state.coupons[idx] = {
-                ...state.coupons[idx],
-                code, required_points, total_quota, remaining_quota, image_url, start_date, end_date, status, translations
-            };
+    try {
+        if (idVal) {
+            // Edit Existing (Note: Admin API allows patching status, quota, points, image, and translations)
+            await apiFetch(`/admin/coupons/${idVal}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    required_points,
+                    total_quota,
+                    status,
+                    image_url,
+                    translations
+                })
+            });
             showToast("Coupon updated successfully.", "success");
+        } else {
+            // Create New
+            await apiFetch('/admin/coupons', {
+                method: 'POST',
+                body: JSON.stringify({
+                    code,
+                    required_points,
+                    total_quota,
+                    image_url,
+                    start_date,
+                    end_date,
+                    status,
+                    translations
+                })
+            });
+            showToast("Coupon created successfully.", "success");
         }
-    } else {
-        // Create New
-        const newCoupon = {
-            id: state.coupons.length + 1,
-            code, required_points, total_quota, remaining_quota, image_url, start_date, end_date, status, translations
-        };
-        state.coupons.push(newCoupon);
-        showToast("Coupon created successfully.", "success");
-    }
 
-    updateStorage('v_coupons', state.coupons);
-    resetCMSForm();
-    renderCMSCoupons();
+        resetCMSForm();
+        renderCMSCoupons();
+    } catch (err) {
+        showToast(err.message, "danger");
+    }
 });
 
 // Render System Redemption Audit Reports
-function renderCMSReports() {
+async function renderCMSReports() {
     const tbody = document.getElementById('cms-reports-table-body');
     tbody.innerHTML = "";
 
-    if (state.redemptions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No redemptions logged yet.</td></tr>`;
-        return;
+    try {
+        const res = await apiFetch('/admin/redemptions');
+        const reports = res.data;
+
+        if (reports.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No redemptions logged yet.</td></tr>`;
+            return;
+        }
+
+        reports.forEach(r => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${r.user.mobile_number}</td>
+                <td>${r.coupon.code}</td>
+                <td><code>${r.redemption_code}</code></td>
+                <td style="color: var(--danger); font-weight:600;">-${r.points_deducted} pts</td>
+                <td>${new Date(r.created_at).toLocaleString()}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (err) {
+        showToast("Failed to load audit reports.", "danger");
     }
-
-    state.redemptions.forEach(r => {
-        const user = state.users.find(u => u.id === r.user_id);
-        const coupon = state.coupons.find(c => c.id === r.coupon_id);
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${user ? user.mobile : 'Unknown'}</td>
-            <td>${coupon ? coupon.code : 'Unknown'}</td>
-            <td><code>${r.redemption_code}</code></td>
-            <td style="color: var(--danger); font-weight:600;">-${r.points_deducted} pts</td>
-            <td>${new Date(r.created_at).toLocaleString()}</td>
-        `;
-        tbody.appendChild(row);
-    });
 }
 
 // Initial Setups
@@ -895,7 +797,5 @@ document.getElementById('lang-select').addEventListener('change', (e) => {
 });
 
 // Bootstrap application state
-initStorage();
-setLanguage('en');
+bootstrapApp();
 resetCMSForm();
-updateProfileUI();
