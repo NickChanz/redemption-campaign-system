@@ -4,6 +4,8 @@ info:
   description: Backend RESTful APIs for the Redemption Campaign platform. Handles user authentication, daily lucky draws, multi-language coupon catalogs, points-deducted redemptions, and CMS administration.
   version: 1.0.0
 servers:
+  - url: https://nickglobal.xyz/api
+    description: Live Production API Root
   - url: http://redemption-system.test/api
     description: Local Laragon Virtual Host API Root
   - url: http://127.0.0.1:8000/api
